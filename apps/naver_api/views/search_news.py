@@ -12,7 +12,7 @@ NAVER_CLIENT_SECRET = settings.NAVER_CLIENT_SECRET
 
 class SearchNewsView(APIView):
     def get(self, request):
-        query = request.GET.get('query', None)
+        query = request.GET.get('query', "")
         display = request.GET.get('display', 10)
 
         url = f"https://openapi.naver.com/v1/search/news.json?query={query}&display={display}&start=1&sort=sim"
