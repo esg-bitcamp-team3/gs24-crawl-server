@@ -1,0 +1,35 @@
+# Python 관련
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# 가상환경 관련
+venv/
+env/
+.venv/
+.env/
+
+# Django 관련
+*.log
+*.pot
+*.pyc
+db.sqlite3
+/static/
+media/
+
+# IDE 관련 (PyCharm, VS Code 등)
+.idea/
+.vscode/
+
+# Poetry 관련
+.poetry/
+poetry.lock
+
+# 시스템 파일 (macOS, Windows)
+.DS_Store
+Thumbs.db
