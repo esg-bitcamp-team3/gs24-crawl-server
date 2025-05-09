@@ -20,4 +20,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/naver-api/', include('apps.naver_api.urls')),
+    path('api/market-price/', include('apps.market_price.urls')),
 ]

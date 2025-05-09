@@ -31,6 +31,8 @@ ALLOWED_HOSTS = []
 NAVER_CLIENT_ID = os.getenv('NAVER_CLIENT_ID')
 NAVER_CLIENT_SECRET = os.getenv('NAVER_CLIENT_SECRET')
 
+MARKET_PRICE_API_SERVICE_KEY = os.getenv('MARKET_PRICE_API_SERVICE_KEY')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'django_filters',
     'apps.naver_api.apps.WordcloudConfig',
+    'apps.market_price.apps.MarketPriceConfig',
     'corsheaders',
 ]
 
