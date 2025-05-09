@@ -10,12 +10,29 @@ MARKET_PRICE_API_SERVICE_KEY = settings.MARKET_PRICE_API_SERVICE_KEY
 
 class CarbonPriceView(APIView):
     def get(self, request):
+        basDt = request.query_params.get('basDt')
+        beginBasDt = request.query_params.get('beginBasDt')
+        isinCd = request.query_params.get('isinCd')
+        itmsNm = request.query_params.get('itmsNm')
+        likeItmsNm = request.query_params.get('likeItmsNm')
+
         url = "http://apis.data.go.kr/1160100/service/GetGeneralProductInfoService/getCertifiedEmissionReductionPriceInfo"
 
         params = {
             "serviceKey": MARKET_PRICE_API_SERVICE_KEY,
             "resultType": "json",
         }
+
+        if basDt:
+            params["basDt"] = basDt
+        if beginBasDt:
+            params["beginBasDt"] = beginBasDt
+        if isinCd:
+            params["isinCd"] = isinCd
+        if itmsNm:
+            params["itmsNm"] = itmsNm
+        if likeItmsNm:
+            params["likeItmsNm"] = likeItmsNm
 
         response = requests.get(url, params=params)
 

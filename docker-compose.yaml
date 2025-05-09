@@ -1,0 +1,56 @@
+version: "3"
+
+services:
+  kafka:
+    image: wurstmeister/kafka:latest
+    environment:
+      KAFKA_ADVERTISED_LISTENER: INSIDE_KAFKA:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENER_NAME: INSIDE_KAFKA
+      KAFKA_LISTENER_PORT: 9093
+      KAFKA_LISTENER_INTERNAL: INSIDE_KAFKA
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_NAME_EXTERNAL: EXTERNAL_KAFKA
+      KAFKA_LISTENER_PORT_EXTERNAL: 9092
+      KAFKA_ADVERTISED_LISTENER_EXTERNAL: kafka:9092
+    ports:
+      - "9093:9093"
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+
+  server:
+    build: ./config
+    volumes:
+      - ./server:/app
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+    depends_on:
+      - kafka
+      - elasticsearch
+    ports:
+      - "8000:8000"
+
+  kafka-python-consumer:
+    build: ./kafka-consumer
+    environment:
+      - KAFKA_BROKER=kafka:9093
+      - KAFKA_TOPIC=market-price-topic
+    depends_on:
+      - kafka
+    ports:
+      - "5000:5000"
