@@ -1,3 +1,6 @@
+from json import dumps
+
+from kafka import KafkaProducer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -42,6 +45,17 @@ class CarbonPriceView(APIView):
             items = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
 
             serializer = CarbonPriceSerializer(items, many=True)
+
+            producer = KafkaProducer(
+                acks=0,
+                compression_type='gzip',
+                bootstrap_servers=['broker의 ip:9092'],
+                value_serializer=lambda x: dumps(x).encode('utf-8')
+            )
+
+            producer.send('market_price', serializer.data)
+            producer.flush()
+
             return Response(serializer.data)
 
         return Response({"error": "Failed to fetch data from API"}, status=500)

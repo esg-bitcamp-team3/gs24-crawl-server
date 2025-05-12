@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 
 def consume_from_kafka():
     consumer = KafkaConsumer(
-        'market-price-topic',  # Kafka에서 구독할 주제
+        'market_price',  # Kafka에서 구독할 주제
         bootstrap_servers=['kafka:9092'],  # Kafka 브로커 주소
         group_id='my-group',
         auto_offset_reset='earliest',  # 가장 처음부터 메시지를 읽음

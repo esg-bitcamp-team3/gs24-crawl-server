@@ -60,7 +60,7 @@ class KeyWordNewsView(APIView):
         keyword = request.GET.get('keyword', "")
         display = request.GET.get('display', 10)
 
-        url = f"https://openapi.naver.com/v1/search/news.json?query=\"{query}\"+{keyword}&display={display}&start=1&sort=sim"
+        url = f"https://openapi.naver.com/v1/search/news.json?query=\"{query}\"+\"{keyword}\"&display={display}&start=1&sort=sim"
 
         headers = {
             "X-Naver-Client-Id": NAVER_CLIENT_ID,
@@ -68,6 +68,8 @@ class KeyWordNewsView(APIView):
         }
 
         response = requests.get(url, headers=headers)
+
+        print(response.json())
 
         if response.status_code == 200:
             data = response.json()
