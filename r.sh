@@ -1,3 +1,4 @@
 #!/bin/bash
 
-docker-compose -p gs up --build -d
+docker-compose pull
+docker-compose -p "gs" up -d

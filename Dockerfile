@@ -1,69 +1,41 @@
-# Build Stage: 의존성 설치 및 빌드
+# Build Stage
 FROM python:3.11-slim AS build
 
-# Install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    python3-dev \
-    default-libmysqlclient-dev \
-    build-essential \
-    pkg-config
-
-# Install Poetry (Poetry 설치)
-RUN pip install --upgrade pip
-RUN pip install poetry
-
-# Poetry bin directory to PATH
-ENV PATH="/root/.local/bin:$PATH"
+# Set the working directory
+WORKDIR /app/
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PIP_DEFAULT_TIMEOUT=100 \
+    POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv"
 
-# Set working directory inside the container
-WORKDIR /app
+FROM python-base as builder-base
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y \
+        curl \
+        build-essential
 
-# Copy Poetry configuration files
-COPY pyproject.toml poetry.lock /app/
+ENV POETRY_VERSION=1.2.2
 
-# Install dependencies using Poetry (가상환경 사용하지 않음)
+# install poetry to manage python dependencies
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# install python dependencies
+ADD pyproject.toml poetry.lock ./
+
 RUN poetry config virtualenvs.create false && poetry install --only main --no-root
 
-# Copy the rest of the application files
-COPY . /app/
+RUN /root/.local/bin/poetry install --no-root
 
-# Production Stage: 최종 실행 환경
-FROM python:3.11-slim AS production
-
-ENV PATH="/root/.local/bin:$PATH"
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Install system dependencies
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    python3-dev \
-    default-libmysqlclient-dev \
-    build-essential \
-    pkg-config \
-    supervisor  # Supervisor for process management in production
-
-# Set working directory inside the container
-WORKDIR /app
-
-# Copy installed dependencies from the build stage
-COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-
-# Copy the application files from the build stage
-COPY --from=build /app /app
-
-# Set Django settings module environment variable
-ENV DJANGO_SETTINGS_MODULE=config.settings
-
-# Expose port for Django application
+# copy project
+COPY . /app
+# run at port 8000
 EXPOSE 8000
-
-# Run the Django application using Poetry
-CMD ["poetry", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["poetry", "run", "python", "manage.py", "runserver"]

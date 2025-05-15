@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'apps.naver_api.apps.WordcloudConfig',
     'apps.market_price.apps.MarketPriceConfig',
+    'apps.crawl.apps.CrawlConfig',
     'corsheaders',
 ]
 
