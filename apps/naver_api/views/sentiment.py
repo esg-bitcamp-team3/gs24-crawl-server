@@ -15,11 +15,10 @@ from config import settings
 NAVER_CLIENT_ID = settings.NAVER_CLIENT_ID
 NAVER_CLIENT_SECRET = settings.NAVER_CLIENT_SECRET
 
-class KoBertSentimentAnalysisView(APIView):
+class SentimentModelMixin:
     MODEL_NAME = "monologg/koelectra-base-finetuned-nsmc"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(self.MODEL_NAME)
         self.model = AutoModelForSequenceClassification.from_pretrained(self.MODEL_NAME, num_labels=2)
@@ -28,7 +27,7 @@ class KoBertSentimentAnalysisView(APIView):
         self.okt = Okt()
 
     def get_keywords_from_api(self, query, display, target):
-        url = f"https://openapi.naver.com/v1/search/{target}.json?query={query}&display={display}&start=1&sort=sim"
+        url = f"https://openapi.naver.com/v1/search/{target}.json?query=\"{query}\"&display={display}&start=1&sort=date"
         headers = {
             "X-Naver-Client-Id": NAVER_CLIENT_ID,
             "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
@@ -37,108 +36,109 @@ class KoBertSentimentAnalysisView(APIView):
         if response.status_code != 200:
             return []
 
-        data = response.json()
-        items = data.get("items", [])
-        texts = []
+        items = response.json().get("items", [])
+        return [item.get("description") + item.get("title") for item in items]
 
-        for item in items:
-            desc = item.get("description") or item.get("title") or ""
-            texts.append(desc)
+class TextSentimentAnalysisView(SentimentModelMixin, APIView):
+    def __init__(self, **kwargs):
+        super().__init__()
 
-        return texts
-
-
-    def extract_keywords(self, texts):
-        keywords = []
-        for text in texts:
-            nouns = self.okt.nouns(text)
-            keywords.extend([n for n in nouns if len(n) > 1])
-        word_freq = Counter(keywords)
-        return [word for word, freq in word_freq.most_common(30)]  # 상위 30개 키워드
-
-    def predict_sentiment(self, texts):
+    def count_sentiment_texts(self, texts):
         if not texts:
-            return []
+            return None
 
         inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=128)
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
         with torch.no_grad():
             outputs = self.model(**inputs)
-            logits = outputs.logits
-            probs = torch.softmax(logits, dim=1).cpu().numpy()  # numpy 배열로 변환
-
-        results = []
-        for text, prob in zip(texts, probs):
-            neg = float(prob[0])
-            pos = float(prob[1])
-            results.append({
-                "text": text,
-                "negative_prob": neg,
-                "positive_prob": pos,
-            })
-
-        return results
-
-    def predict_sentiment_texts(self, texts):
-        if not texts:
-            return None
-
-        results = []
-        for text in texts:
-
-            inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
-
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                probs = F.softmax(outputs.logits, dim=1)
-                pred = torch.argmax(probs, dim=1).item()
-
-            label = "긍정" if pred == 1 else "부정"
-            results.append({"text":text, "label": label})
-
-        return results
-
-    def count_sentiment_texts(self, texts):
-        if not texts:
-            return None
-
-        negatives = 0
-        positives = 0
-        for text in texts:
-
-            inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
-
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-                probs = F.softmax(outputs.logits, dim=1)
-                pred = torch.argmax(probs, dim=1).item()
-
-            if pred == 1:
-                positives += 1
-            else:
-                negatives += 1
+            preds = torch.argmax(F.softmax(outputs.logits, dim=1), dim=1).tolist()
 
         return {
-            "negatives": negatives,
-            "positives": positives,
+            "negatives": preds.count(0),
+            "positives": preds.count(1),
         }
 
     def get(self, request):
         query = request.GET.get('query', "")
-        display = request.GET.get('display', 10)
+        display = int(request.GET.get('display', 30))
 
         if not query:
             return Response({"error": "query 파라미터가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         all_texts = []
-
         for target in ["news", "cafearticle", "blog"]:
-            texts = self.get_keywords_from_api(query, display, target)
-            all_texts.extend(texts)
+            all_texts.extend(self.get_keywords_from_api(query, display, target))
 
         result = self.count_sentiment_texts(all_texts)
+        return Response({"result": result})
+
+
+class KeywordSentimentAnalysisView(SentimentModelMixin, APIView):
+    def __init__(self, **kwargs):
+        super().__init__()
+
+    def analyze_keywords_by_sentiment(self, texts):
+        if not texts:
+            return {"positive_keywords": [], "negative_keywords": []}
+
+        inputs = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=128)
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            probs = F.softmax(outputs.logits, dim=1)
+            preds = torch.argmax(probs, dim=1).tolist()
+
+        # 단어 감정 통계 카운터
+        pos_counter = Counter()
+        neg_counter = Counter()
+
+        for text, pred in zip(texts, preds):
+            nouns = [n for n in self.okt.nouns(text) if len(n) > 1]
+            if pred == 1:
+                pos_counter.update(nouns)
+            else:
+                neg_counter.update(nouns)
+
+        all_keywords = set(pos_counter.keys()).union(set(neg_counter.keys()))
+        positive_keywords = []
+        negative_keywords = []
+
+        for word in all_keywords:
+            pos_count = pos_counter[word]
+            neg_count = neg_counter[word]
+
+            if pos_count + neg_count < 2:
+                continue
+
+            if pos_count > neg_count:
+                positive_keywords.append((word, pos_count))
+            else:
+                negative_keywords.append((word, neg_count))
+
+        positive_keywords = [w for w, _ in sorted(positive_keywords, key=lambda x: -x[1])[:20]]
+        negative_keywords = [w for w, _ in sorted(negative_keywords, key=lambda x: -x[1])[:20]]
+
+        return {
+            "positive_keywords": positive_keywords,
+            "negative_keywords": negative_keywords,
+        }
+
+    def get(self, request):
+        query = request.GET.get('query', "")
+        display = int(request.GET.get('display', 10))
+
+        if not query:
+            return Response({"error": "query 파라미터가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        all_texts = []
+        for target in ["news", "cafearticle", "blog"]:
+            all_texts.extend(self.get_keywords_from_api(query, display, target))
+
+        keyword_result = self.analyze_keywords_by_sentiment(all_texts)
 
         return Response({
-            "result": result,
+            "positive_keywords": keyword_result["positive_keywords"],
+            "negative_keywords": keyword_result["negative_keywords"],
         })
