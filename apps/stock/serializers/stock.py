@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 
 
-class ResponseBodyoutputSerializer(serializers.Serializer):
+class StockResponseBodyoutputSerializer(serializers.Serializer):
     iscd_stat_cls_code = serializers.CharField(required=False)
     marg_rate = serializers.CharField(required=False)
     rprs_mrkt_kor_name = serializers.CharField(required=False)
@@ -86,8 +86,8 @@ class ResponseBodyoutputSerializer(serializers.Serializer):
     sltr_yn = serializers.CharField(required=False)
     mang_issu_cls_code = serializers.CharField(required=False)
 
-class ResponseBodySerializer(serializers.Serializer):
+class StockResponseBodySerializer(serializers.Serializer):
     rt_cd = serializers.CharField()
     msg_cd = serializers.CharField()
     msg1 = serializers.CharField()
-    output = ResponseBodyoutputSerializer()
+    output = StockResponseBodyoutputSerializer()
