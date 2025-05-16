@@ -38,6 +38,8 @@ EXCHANGE_RATE_API_KEY = os.getenv('EXCHANGE_RATE_API_KEY')
 INVEST_APP_KEY = os.getenv('INVEST_APP_KEY')
 INVEST_SECRET_KEY = os.getenv('INVEST_SECRET_KEY')
 
+OPEN_DART_API_KEY = os.getenv('OPEN_DART_API_KEY')
+
 # Application definition
 
 INSTALLED_APPS = [
