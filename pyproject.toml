@@ -22,6 +22,7 @@ dependencies = [
     "transformers (>=4.51.3,<5.0.0)",
     "torch (>=2.7.0,<3.0.0)",
     "protobuf (>=6.31.0,<7.0.0)",
+    "redis (>=6.1.0,<7.0.0)",
 ]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

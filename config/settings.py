@@ -35,6 +35,9 @@ MARKET_PRICE_API_SERVICE_KEY = os.getenv('MARKET_PRICE_API_SERVICE_KEY')
 
 EXCHANGE_RATE_API_KEY = os.getenv('EXCHANGE_RATE_API_KEY')
 
+INVEST_APP_KEY = os.getenv('INVEST_APP_KEY')
+INVEST_SECRET_KEY = os.getenv('INVEST_SECRET_KEY')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -50,6 +53,7 @@ INSTALLED_APPS = [
     'apps.naver_api.apps.WordcloudConfig',
     'apps.market_price.apps.MarketPriceConfig',
     'apps.crawl.apps.CrawlConfig',
+    'apps.stock.apps.StockConfig',
     'corsheaders',
 ]
 
